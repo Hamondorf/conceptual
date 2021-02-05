@@ -21,7 +21,9 @@ template <class T>
 concept req_aggregate = req_array<T> || req_class_or_union<T> && std::is_aggregate_v<T>;
 
 template <class T>
-concept req_polymorphic = req_class<T> && requires (T * ptr) { dynamic_cast<void const volatile*>(ptr); };
+concept req_polymorphic =
+       req_class<T> 
+    && requires (T* ptr) { dynamic_cast<void const volatile*>(ptr); };
 
 template <class T>
 concept req_monomorphic = req_object<T> && !req_polymorphic<T>;
