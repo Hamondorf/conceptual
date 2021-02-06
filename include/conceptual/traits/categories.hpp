@@ -114,6 +114,12 @@ template <class T>
 concept req_reference = req_lval_ref<T> || req_rval_ref<T>;
 
 template <class T>
+concept req_function_reference = req_reference<T> && req_function<std::remove_reference_t<T>>;
+
+template <class T>
+concept req_function_pointer = req_pointer<T> && req_function<std::remove_pointer_t<T>>;
+
+template <class T>
 concept req_class_or_union = req_class<T> || req_union<T>;
 
 template <class T>
@@ -131,5 +137,15 @@ concept req_compound =
     || req_function<T>
     || req_enum<T>
     || req_class_or_union<T>;
+
+
+
+// Aliases/Abbreviations
+
+template <class T>
+concept req_function_ref = req_function_reference<T>;
+
+template <class T>
+concept req_function_ptr = req_function_pointer<T>;
 
 }

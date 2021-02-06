@@ -1,8 +1,8 @@
 #pragma once
 
 #include <concepts>
+#include "conceptual/detail/comparison.hpp"
 #include "conceptual/detail/same_as.hpp"
-
 
 namespace ham::cpt
 {
