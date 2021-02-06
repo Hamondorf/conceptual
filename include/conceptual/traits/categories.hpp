@@ -74,6 +74,9 @@ template <class T>
 concept req_union = std::is_union_v<T>;
 
 template <class T>
+concept non_union_class_type = req_class<T> || req_struct<T>;
+
+template <class T>
 concept req_function = std::is_function_v<T>;
 
 template <class T>
@@ -116,6 +119,9 @@ concept req_reference = req_lval_ref<T> || req_rval_ref<T>;
 
 template <class T>
 concept req_class_or_union = req_class<T> || req_union<T>;
+
+template <class T>
+concept req_class_type = req_class_or_union<T>;
 
 template <class T>
 concept req_object = req_class_or_union<T> || req_scalar<T> || req_array<T>;
