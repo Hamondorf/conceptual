@@ -97,6 +97,16 @@ concept req_unsigned_integer_impl = std::integral<T> &&
             unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>
     );
 
+template <class T>
+concept req_integral_impl =
+    HAM_CPT_SUBSUMPTION_ON(
+       req_char_type<T>
+    || req_boolean<T>
+    || req_signed_integer<T>
+    || req_unsigned_integer<T>
+    )
+    HAM_CPT_SUBSUMPTION_OFF(std::integral<T>);
+
 
 template <class T>
 concept req_floating_impl = 

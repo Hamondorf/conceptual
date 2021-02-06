@@ -48,11 +48,7 @@ concept req_unsigned_integer = detail::req_unsigned_integer_impl<T>;
 //  subsumes: req_same_as<T, [cv-qualified integral type]> and std::integral<T>*
 //  *if extended subsumption is enabled
 template <class T>
-concept req_integral =
-       req_char_type<T>
-    || req_boolean<T>
-    || req_signed_integer<T>
-    || req_unsigned_integer<T>;
+concept req_integral = detail::req_integral_impl<T>;
 
 template <class T>
 concept req_floating = detail::req_floating_impl<T>;
