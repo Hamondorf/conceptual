@@ -4,31 +4,24 @@
 #include <type_traits>
 
 #include "conceptual/detail/same_as.hpp"
-
+#include "conceptual/detail/type_categories.hpp"
 
 namespace ham::cpt
 {
 
 
 template <class T>
-concept req_void = req_same_as_ignore_cv<T, void>;
+concept req_void = detail::req_void_impl<T>;
 
 template <class T>
-concept req_null_pointer = req_same_as_ignore_cv<T, std::nullptr_t>;
+concept req_null_pointer = detail::req_null_pointer_impl<T>;
 
 
 template <class T>
-concept req_narrow_char =
-       req_same_as_ignore_cv<T, char>
-    || req_same_as_ignore_cv<T, signed   char>
-    || req_same_as_ignore_cv<T, unsigned char>
-    || req_same_as_ignore_cv<T, char8_t>;
+concept req_narrow_char = detail::req_narrow_char_impl<T>;
 
 template <class T>
-concept req_wide_char =
-       req_same_as_ignore_cv<T, char16_t>
-    || req_same_as_ignore_cv<T, char32_t>
-    || req_same_as_ignore_cv<T, wchar_t>;
+concept req_wide_char = detail::req_wide_char_impl<T>;
 
 //  Requires Character Type
 //  constrains T to be a standard character type
@@ -36,47 +29,33 @@ template <class T>
 concept req_char_type = req_narrow_char<T> || req_wide_char<T>;
 
 template <class T>
-concept req_boolean = req_same_as_ignore_cv<T, bool>;
+concept req_boolean = detail::req_boolean_impl<T>;
 
 //  signed char is considered a signed integer type 
 //  lest req_signed_integer<std::int8_t> return false as int8_t
 //  is often an alias for it
 template <class T>
-concept req_signed_integer =
-       req_same_as_ignore_cv<T, signed char>
-    || req_same_as_ignore_cv<T, signed short>          
-    || req_same_as_ignore_cv<T, signed int>
-    || req_same_as_ignore_cv<T, signed long>
-    || req_same_as_ignore_cv<T, signed long long>;
+concept req_signed_integer = detail::req_signed_integer_impl<T>;
 
 //  unsigned char is considered a signed integer type 
 //  lest req_signed_integer<std::uint8_t> return false as uint8_t
 //  is often an alias for it
 template <class T>
-concept req_unsigned_integer =
-       req_same_as_ignore_cv<T, unsigned char>
-    || req_same_as_ignore_cv<T, unsigned short>          
-    || req_same_as_ignore_cv<T, unsigned int>
-    || req_same_as_ignore_cv<T, unsigned long>
-    || req_same_as_ignore_cv<T, unsigned long long>;
+concept req_unsigned_integer = detail::req_unsigned_integer_impl<T>;
 
 //  Requires Integral
 // 
-//  subsumes: req_same_as<T, [cv-qualified integral type]> and std::integral<T>
+//  subsumes: req_same_as<T, [cv-qualified integral type]> and std::integral<T>*
+//  *if extended subsumption is enabled
 template <class T>
 concept req_integral =
-      (req_char_type<T>
+       req_char_type<T>
     || req_boolean<T>
     || req_signed_integer<T>
-    || req_unsigned_integer<T>)
-    && std::integral<T>;
+    || req_unsigned_integer<T>;
 
 template <class T>
-concept req_floating = 
-      (req_same_as_ignore_cv<T, float>
-    || req_same_as_ignore_cv<T, double>
-    || req_same_as_ignore_cv<T, long double>)
-    && std::floating_point<T>;
+concept req_floating = detail::req_floating_impl<T>;
 
 
 template <class T>
@@ -93,6 +72,9 @@ concept req_struct = req_class<T>;
 
 template <class T>
 concept req_union = std::is_union_v<T>;
+
+template <class T>
+concept non_union_class_type = req_class<T> || req_struct<T>;
 
 template <class T>
 concept req_function = std::is_function_v<T>;
@@ -137,6 +119,9 @@ concept req_reference = req_lval_ref<T> || req_rval_ref<T>;
 
 template <class T>
 concept req_class_or_union = req_class<T> || req_union<T>;
+
+template <class T>
+concept req_class_type = req_class_or_union<T>;
 
 template <class T>
 concept req_object = req_class_or_union<T> || req_scalar<T> || req_array<T>;
