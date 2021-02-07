@@ -44,6 +44,10 @@ template <class T, class Signature>
 struct register_callable_impl
 {
     static constexpr bool is_valid = has_fn_call_op_with_signature<T, Signature>;
+
+    static_assert(std::is_class_v<T> || std::is_union_v<T>, "'T' must be a class type.");
+    static_assert(std::is_function_v<Signature>, "'Signature' must be a function type.");
+    static_assert(is_valid, "Invalid callable registration.");
 };
 
 template <class T, class Signature>
@@ -54,6 +58,10 @@ struct register_callable_impl<T, Signature>
 {
     static constexpr bool is_valid = has_fn_call_op_with_signature<T, Signature>;
 
+    static_assert(std::is_class_v<T> || std::is_union_v<T>, "'T' must be a class type.");
+    static_assert(std::is_function_v<Signature>, "'Signature' must be a function type.");
+    static_assert(is_valid, "Invalid callable registration.");
+
     friend consteval bool callable_reg_adl(callable_reg_helper<T>)
     {
         return is_valid;
@@ -61,20 +69,21 @@ struct register_callable_impl<T, Signature>
 };
 
 template <class T, class Signature>
-inline constexpr bool register_callable_and_check_validity = 
-    register_callable_impl<std::remove_cvref_t<T>, Signature>::is_valid;
+using register_callable_and_check_validity = 
+    std::bool_constant<
+        register_callable_impl<std::remove_cvref_t<T>, Signature>::is_valid
+    >;
 
 //*
 template <class T>
 class is_registered_callable
 {
-    template <int... Is>
-    requires (sizeof...(Is) == 0)
+    template <std::nullptr_t = 0>
     static constexpr bool value_ = false;
 
-    template <int... Is>
+    template <std::nullptr_t np>
     requires (callable_reg_adl(callable_reg_helper<std::remove_cvref_t<T>>{}))
-    static constexpr bool value_<Is...> = true;
+    static constexpr bool value_<np> = true;
 
 public:
     static constexpr bool value = value_<>;

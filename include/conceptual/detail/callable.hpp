@@ -5,9 +5,29 @@
 #include "conceptual/traits/categories.hpp"
 #include "conceptual/detail/register_callable.hpp"
 
+
+
+
+
+/**
+ *  Allows for union/final class types to be registered as callables by
+ *  providing a single valid signature for their operator().
+ *  
+ *  @param T - class being registered
+ *  @param Signature - Any valid signature for T::operator()
+ *  
+ *  @note Registering a non-final/union class types has no effect; however,
+ *  the static_assert will still fire if there is no valid operator() for T
+ *  with the given signature. 
+ */
 #define HAM_CPT_REGISTER_CALLABLE(T, Signature)\
-    static_assert(::ham::cpt::detail::register_callable_and_check_validity<T, Signature>,\
-    "'" #T "' has no operator() with signature " #Signature);
+    static_assert(::std::is_class_v<T> || ::std::is_union_v<T>,\
+         "'T' must be a class type. (T is '" #T "')" );\
+    static_assert(::std::is_function_v<Signature>, \
+        "'Signature' must be a fuction type. (Signature is '" #Signature "')");\
+    static_assert(\
+        ::ham::cpt::detail::register_callable_and_check_validity<T, Signature>{},\
+        "'" #T "' has no operator() with signature " #Signature)
 
 namespace ham::cpt
 {
