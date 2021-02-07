@@ -21,8 +21,8 @@ namespace detail
 {
 
 template <class T, class... Types>
-inline constexpr bool same_as_cv_any_of_v = (req_same_as<std::remove_cv_t<T>, Types> || ...);
-
+using remove_cv_same_as_any_of [[maybe_unused]] 
+    = std::bool_constant<req_same_as<std::remove_cv_t<T>, Types> || ...>;
 
 template <class T>
 concept req_void_impl = 
@@ -44,7 +44,7 @@ concept req_narrow_char_impl = std::integral<T> &&
     || req_same_as_ignore_cv<T, char8_t>
     )
     HAM_CPT_SUBSUMPTION_OFF(
-        same_as_cv_any_of_v<T, char, signed char, unsigned char, char8_t>
+        remove_cv_same_as_any_of<T, char, signed char, unsigned char, char8_t>::value
     );
 
 template <class T>
@@ -55,13 +55,13 @@ concept req_wide_char_impl = std::integral<T> &&
     || req_same_as_ignore_cv<T, wchar_t>
     ))
     HAM_CPT_SUBSUMPTION_OFF(
-        same_as_cv_any_of_v<T, char16_t, char32_t, wchar_t>
+        remove_cv_same_as_any_of<T, char16_t, char32_t, wchar_t>::value
     );
 
 template <class T>
 concept req_boolean_impl = std::integral<T> && 
     HAM_CPT_SUBSUMPTION_ON(req_same_as_ignore_cv<T, bool>)
-    HAM_CPT_SUBSUMPTION_OFF(same_as_cv_any_of_v<T, bool>);
+    HAM_CPT_SUBSUMPTION_OFF(remove_cv_same_as_any_of<T, bool>::value);
 
 //  signed char is considered a signed integer type 
 //  lest req_signed_integer<std::int8_t> return false as int8_t
@@ -76,8 +76,12 @@ concept req_signed_integer_impl = std::integral<T> &&
     || req_same_as_ignore_cv<T, signed long long>
     ))
     HAM_CPT_SUBSUMPTION_OFF(
-        same_as_cv_any_of_v<T, 
-            signed char, signed short, signed int, signed long, signed long long>
+        remove_cv_same_as_any_of<T, 
+            signed char, 
+            signed short, 
+            signed int, 
+            signed long, 
+            signed long long>::value
     );
 
 //  unsigned char is considered a signed integer type 
@@ -93,9 +97,23 @@ concept req_unsigned_integer_impl = std::integral<T> &&
     || req_same_as_ignore_cv<T, unsigned long long>
     ))
     HAM_CPT_SUBSUMPTION_OFF(
-        same_as_cv_any_of_v<T, 
-            unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>
+        remove_cv_same_as_any_of<T, 
+            unsigned char, 
+            unsigned short, 
+            unsigned int, 
+            unsigned long, 
+            unsigned long long>::value
     );
+
+template <class T>
+concept req_integral_impl =
+    HAM_CPT_SUBSUMPTION_ON(
+       req_char_type<T>
+    || req_boolean<T>
+    || req_signed_integer<T>
+    || req_unsigned_integer<T>
+    )
+    HAM_CPT_SUBSUMPTION_OFF(std::integral<T>);
 
 
 template <class T>
