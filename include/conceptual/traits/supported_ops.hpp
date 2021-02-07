@@ -136,6 +136,13 @@ template <class LHS, class RHS>
 concept req_trivially_assignable_from =
     req_assignable_from<LHS, RHS> && std::is_trivially_assignable_v<LHS, RHS>;
 
+template <class LHS, class RHS>
+concept req_fully_assignable_from =
+       req_assignable_from<LHS, RHS>
+    && req_assignable_from<LHS, RHS&>
+    && req_assignable_from<LHS, RHS const>
+    && req_assignable_from<LHS, RHS const&>;
+
 
 // Move
 
