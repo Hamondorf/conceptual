@@ -2,17 +2,19 @@
 
 #include <concepts>
 #include "conceptual/detail/comparison.hpp"
-#include "conceptual/detail/same_as.hpp"
+#include "conceptual/traits/relationships.hpp"
+
+
 
 namespace ham::cpt
 {
 
 template <class B>
-concept boolean_testable = 
-       req_same_as_ignore_cv<bool, B>
-    || requires (B&& b)
+concept req_boolean_testable = 
+       detail::req_boolean_testable_impl<B>
+    && requires (B&& b)
     {
-        { !std::forward<B>(b) } -> std::convertible_to<bool>;
+        { !std::forward<B>(b) } -> detail::req_boolean_testable_impl<>;
     };
 
 //  Comparability
