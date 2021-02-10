@@ -26,7 +26,24 @@ concept req_derived_from_bool_constant =
     || req_derived_from_bool_constant_impl<T, false>;
 
 
+template <class...>
+concept req_allocator_ptr_ops = false;
+
+template <
+    class A,
+    class T   = alloc_value_t<A>,
+    class B = alloc_rebind_t<A, decltype([]<class = A>(){})>,
+    class U = alloc_value_t<T>,
+    class Ptr = alloc_ptr_t<A>,
+    class ConstPtr = alloc_const_ptr_t<A>,
+    class VPtr = alloc_void_ptr_t<A>,
+    class ConstVPtr = alloc_const_void_ptr_t<A>
+
+>
+concept req_allocator_impl = false;
 
 }
+
+constexpr void f(int x, decltype(x) y);
 
 }
