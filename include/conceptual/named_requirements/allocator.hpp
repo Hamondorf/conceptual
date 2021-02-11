@@ -33,7 +33,8 @@ concept req_valid_allocator_ptr =
 
 
 
-template <class A,
+template <
+    class A,
     class T              = alloc_value_t<A>,
     class Ptr            = alloc_ptr_t<A>,
     class ConstPtr       = alloc_const_ptr_t<A>,
@@ -45,11 +46,36 @@ concept req_alloc_impl_validate_ptr_ops =
     && req_static_castable_to<ConstVoidPtr, ConstPtr>
     && requires (Ptr p, ConstPtr cp, VoidPtr vp, ConstVoidPtr cvp)//, decltype(*p) r)
     {
-        {*p} -> req_same_as<T&>;
-
-
+        {*p } -> req_same_as<T&>;
+        {*cp} -> req_same_as<T const&>;
+        {std::pointer_traits<Ptr>::to_pointer(*p)} -> req_same_as<Ptr>;
+        // TODO: add checks for operator->
     };
     
+template <
+    class A,
+    class Ptr          = alloc_ptr_t<A>,
+    class ConstVoidPtr = alloc_const_void_ptr_t<A>,
+    class SizeType     = alloc_size_t<A>,
+    class X            = decltype([]{}),
+    class Traits       = std::allocator_traits<A>
+>
+concept req_alloc_impl_validate_allocator_ops =
+       req_equality_comparable<A>
+    && req_copy_constructible<A>
+    && req_constructible_from<A, alloc_rebind_t<A, X>>
+    && req_constructible_from<A, alloc_rebind_t<A, X>&>
+    && requires (A& a, Ptr p, ConstVoidPtr cvp, SizeType n, X* xp)
+    {
+        {a.allocate(n)} -> req_same_as<Ptr>;
+        {Traits::allocate(a, n, cvp)} -> req_same_as<Ptr>;
+        
+        a.deallocate(p, n);
+        {Traits::max_size()} -> req_same_as<SizeType>;
+        Traits::construct(a, xp, *xp);
+        Traits::destroy(a, xp);
+        {Traits::select_on_container_copy_construction(a)} -> req_same_as<A>;
+    };
 
 template <
     class A,
@@ -63,7 +89,7 @@ template <
     class SizeType       = alloc_size_t<A>,
     class DifferenceType = alloc_difference_t<A>
 >
-concept req_alloc_impl_inner_types =
+concept req_alloc_impl_validate_inner_types =
        req_same_as<T, typename A::value_type>
     && req_valid_allocator_ptr<Ptr>
     && req_convertible_to<Ptr, ConstPtr>
@@ -84,9 +110,18 @@ concept req_alloc_impl_inner_types =
     
     && req_signed_integral<DifferenceType>
     && req_unsigned_integral<SizeType>
-    ;
+    && req_derived_from_bool_constant<alloc_always_equal_t<A>>
+    && req_derived_from_bool_constant<alloc_prop_on_cntr_copy_t<A>>
+    && req_derived_from_bool_constant<alloc_prop_on_cntr_move_t<A>>
+    && req_derived_from_bool_constant<alloc_prop_on_cntr_swap_t<A>>;
 
 }
+
+template <class A>
+concept nreq_allocator =
+       detail::req_alloc_impl_validate_inner_types<A>
+    && detail::req_alloc_impl_validate_allocator_ops<A>
+    && detail::req_alloc_impl_validate_ptr_ops<A>;
 
 
 }
