@@ -22,7 +22,7 @@ namespace detail
 
 template <class T, class... Types>
 using remove_cv_same_as_any_of [[maybe_unused]] 
-    = std::bool_constant<req_same_as<std::remove_cv_t<T>, Types> || ...>;
+    = std::bool_constant<(req_same_as<std::remove_cv_t<T>, Types> || ...)>;
 
 template <class T>
 concept req_void_impl = 
