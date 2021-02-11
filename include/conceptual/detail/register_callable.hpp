@@ -13,7 +13,7 @@ namespace ham::cpt::detail
 {
 
 template <class T>
-struct is_registered_callable;
+class is_registered_callable;
 
 // callable_registration_helper
 template <class T>
