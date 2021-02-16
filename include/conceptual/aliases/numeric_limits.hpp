@@ -17,13 +17,13 @@ struct nlim_constant_impl
 template <class T, auto value>
 requires std::is_arithmetic_v<decltype(value)>
 struct nlim_constant_impl<T, value>
-    : std::integral_constant<decltype(value), value>
+    : std::integral_constant<std::remove_const_t<decltype(value)>, value>
 {   };
 
 template <class T, T (*fn)() noexcept>
 requires (fn != nullptr) && std::is_arithmetic_v<T>
 struct nlim_constant_impl<T, fn>
-    : std::integral_constant<T, fn()>
+    : std::integral_constant<T, (fn())>
 {   };
 
 template <class T, T (*fn)() noexcept>

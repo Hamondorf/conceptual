@@ -2,13 +2,14 @@
 
 #include "conceptual/aliases/numeric_limits.hpp"
 #include "conceptual/traits/properties.hpp"
+#include "conceptual/detail/numeric_limits_specialized.hpp"
 
 
 // TODO: Fix this god awful mess
 
 namespace ham::cpt
 {
-namespace detail
+namespace detail_old
 {
 
 template <class ExpectedMemberType, class... Members>
@@ -100,7 +101,7 @@ concept nlim_specialized_impl =
 }
 
 template <class T>
-concept nlim_specialized = req_arithmetic<T> || detail::nlim_specialized_impl<T>;
+concept nlim_specialized = req_arithmetic<T> || detail_old::nlim_specialized_impl<T>;
 
 
 }
