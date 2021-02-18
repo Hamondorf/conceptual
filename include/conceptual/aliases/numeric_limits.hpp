@@ -98,7 +98,11 @@ HAM_CPT_NLIM_ALIAS(quiet_NaN);
 HAM_CPT_NLIM_ALIAS(signaling_NaN);
 HAM_CPT_NLIM_ALIAS(denorm_min);
 
+template <class T>
+using nlim_is_ieee754 = nlim_is_iec559<T>;
 
+template <class T>
+inline constexpr bool nlim_is_ieee754_v = nlim_is_iec559_v<T>;
 
 #undef HAM_CPT_NLIM_ALIAS
 

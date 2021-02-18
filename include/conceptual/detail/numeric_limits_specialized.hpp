@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bit>
+#include <cstddef>
 #include <compare>
 
 #include "conceptual/aliases/numeric_limits.hpp"
@@ -8,6 +10,9 @@
 
 #include "numeric.hpp"
 
+
+#define HAM_CPT_TRY_REQ(...) \
+    (!requires { requires ::ham::cpt::detail::bool_v<!(__VA_ARGS__)>; })
 
 namespace ham::cpt
 {
@@ -26,153 +31,6 @@ concept req_numeric_type =
         requires (T{} == T(0));
     };
 
-namespace nlim_impl
-{
-
-template <class T>
-using rm_cv = std::remove_cv_t<T>;
-
-template <class T>
-using const_ = rm_cv<T> const;
-
-template <class T>
-using volatile_ = rm_cv<T> volatile;
-
-template <class T>
-using cv_ = rm_cv<T> const volatile;
-
-constexpr auto const& cmp_partial_order = std::compare_partial_order_fallback;
-
-template <class T, template <class> class NlimNaN>
-consteval std::partial_ordering NaN_ordering() noexcept
-{
-    return cmp_partial_order(NlimNaN<T>::value, NlimNaN<T>::value);
-}
-
-
-#if __INTELLISENSE__
-template <class T>
-concept has_value_member = requires { typename T::value_type; };
-
-template <class T, template <class> class NlimMember, class MemberType>
-consteval bool valid_member_test()
-{
-    if constexpr (has_value_member<NlimMember<T>>)
-        return std::same_as<MemberType, typename NlimMember<T>::value_type>;
-    else
-        return false;
-}
-
-
-template <class T, template <class> class NlimMember, class MemberType>
-concept req_valid_nlim_member_for =
-(valid_member_test<T, NlimMember, MemberType>)();
-
-#else
-
-template <class T, template <class> class NlimMember, class MemberType>
-inline constexpr bool req_valid_nlim_member_for =
-std::same_as<MemberType, typename NlimMember<T>::value_type>;
-
-#endif
-
-template <class T, template <class> class NlimMember, class MemberType>
-concept req_valid_nlim_member = 
-       req_valid_nlim_member_for<rm_cv<T>, NlimMember, MemberType>
-    && req_valid_nlim_member_for<const_<T>, NlimMember, MemberType>
-    && req_valid_nlim_member_for<volatile_<T>, NlimMember, MemberType>
-    && req_valid_nlim_member_for<cv_<T>, NlimMember, MemberType>;
-
-
-template <class T>
-concept probably_floating_point = 
-    !nlim_is_integer_v<T> && !nlim_is_exact_v<T> || nlim_is_iec559_v<T>;
-
-
-template <bool has_NaN, class T, template<class> class NlimNaN>
-//requires (!has_NaN) || req_valid_nlim_member<T, NlimNaN, T>
-consteval bool check_NaNs_impl() noexcept
-{
-    static_assert(std::same_as<T, std::remove_cv_t<T>>, 
-        "Implementation Error: T should be cv-unqualified.");
-
-    if constexpr (!has_NaN) {
-        return true;
-    }
-    else if constexpr (!req_valid_nlim_member<T, NlimNaN, T>) {
-        return false;
-    }
-    else {
-        constexpr auto ordering0 = NaN_ordering<T, NlimNaN>();
-        constexpr std::partial_ordering orderings[4] = {
-            (NaN_ordering<T, NlimNaN>)(),
-            (NaN_ordering<T const, NlimNaN>)(),
-            (NaN_ordering<T volatile, NlimNaN>)(),
-            (NaN_ordering<T const volatile, NlimNaN>)()
-        };
-
-        for (auto ordering : orderings)
-        {
-            if (ordering != orderings[0])
-                return false;
-        }
-
-        if constexpr (orderings[0] == std::partial_ordering::unordered) {
-            return true;
-        }
-        else if constexpr (orderings[0] == std::partial_ordering::equivalent) {
-            constexpr NlimNaN<T> nl_NaN{};
-            constexpr NlimNaN<const_<T>> nl_NaN_c{};
-            constexpr NlimNaN<volatile_<T>> nl_NaN_v{};
-            constexpr NlimNaN<cv_<T>> nl_NaN_cv{};
-
-            return (nl_NaN() == nl_NaN_c) && (nl_NaN() == nl_NaN_v) && (nl_NaN() == nl_NaN_cv);
-        }
-        else {
-            return false;
-        }
-    }
-}
-
-template <class T>
-consteval bool check_NaNs()
-{
-    return (check_NaNs_impl<nlim_has_quiet_NaN_v<T>, nlim_quiet_NaN>)()
-        && (check_NaNs_impl<nlim_has_signaling_NaN_v<T>, nlim_signaling_NaN>)();
-}
-
-template <class T>
-consteval bool check_min_max_and_lowest()
-{
-    constexpr bool valid_min    = req_valid_nlim_member_for<T, nlim_min, T>;
-    constexpr bool valid_max    = req_valid_nlim_member_for<T, nlim_max, T>;
-    constexpr bool valid_lowest = req_valid_nlim_member_for<T, nlim_lowest, T>;
-
-    if constexpr (valid_min && valid_max && valid_lowest) {
-        constexpr auto&& min = nlim_min_v<T>;
-        constexpr auto&& max = nlim_max_v<T>;
-        constexpr auto&& lowest = nlim_lowest_v<T>;
-
-        if constexpr (nlim_is_bounded_v<T>) {
-
-            if constexpr (lowest == max)
-                return lowest == min && max == min;
-            else
-                return lowest <= min && min <= max && lowest < max;
-        }
-        else if constexpr (!nlim_is_signed_v<T>) { // bounded == false && signed == false
-            return valid_min && lowest == 0 && max == 0;
-        }
-    }
-    else // bounded == false && signed == true
-        return false;
-    
-}
-
-
-namespace WIP
-{
-
 // Helper variable template for checking requirements involving operations
 // on numeric types. If any of the expressions are non-constant, the program
 // would be ill-formed; however, failure to do so as part of a template 
@@ -186,12 +44,26 @@ inline constexpr bool bool_v = b;
 
 static_assert(bool_v<true> && !bool_v<false>, "how");
 
+
+namespace nlim_impl
+{
+
+
 struct NotMeaningfulFn
 {
     template <class T>
     consteval bool operator()(T const& value) const noexcept
     {
-        return value == T();
+        return value == T((int)0);
+    }
+
+    template <class T, class... Ts>
+    consteval bool operator()(T const& value, Ts const&... values) const noexcept
+    {
+        if constexpr (!(req_same_as<T, Ts> && ...))
+            return false
+        else
+            return ((*this)(value) && ...  && (*this)(values));
     }
 
     constexpr bool operator==(NotMeaningfulFn const&) const noexcept = default;
@@ -218,6 +90,8 @@ consteval bool check_min_max_and_lowest()
     }
 }
 
+constexpr auto const& cmp_partial_order = std::compare_partial_order_fallback;
+
 template <class T, template <class> class NlimNaN>
 consteval std::partial_ordering NaN_ordering() noexcept
 {
@@ -225,20 +99,212 @@ consteval std::partial_ordering NaN_ordering() noexcept
         NlimNaN<T>::value, NlimNan<T>::value);
 }
 
-template <class T, template <class> class NlimNaN, bool is_meaningful>
-consteval bool check_NaNs_impl()
+
+
+template <class Desired, bool is_ordered = true, class T, class... Ts>
+consteval bool enforce_consistent_values_impl(T const& member, Ts const&... cv_members)
 {
-
+    constexpr std::partial_ordering unordered = std::partial_ordering::unordered;
+    
+    if constexpr (!(req_same_as<Desired, T> && ... && req_same_as<Desired, Ts>)) {
+        return false;
+    }
+    else {
+        if constexpr (is_ordered)
+            return ((member == cv_members) && ...);
+        else
+            return  (cmp_partial_order(member    , member    ) == unordered)
+                && ((cmp_partial_order(cv_members, cv_members) == unordered) && ...);
+    }
 }
 
+template <class T>
+consteval bool enforce_consistent_NaNs()
+{
+    static_assert(req_same_as<std::remove_cv_t<T>, T>, 
+        "Implementation Bug: T should be cv-unqualified.");
 
+    using Tc  = T const;
+    using Tv  = T volatile;
+    using Tcv = T const volatile;
 
+    bool valid_qNaN = 
+       /*IF*/ nlim_has_quiet_NaN_v<T> ? 
+            (enforce_consistent_values_impl<T, false>)(
+                nlim_quiet_NaN_v<T >, nlim_quiet_NaN_v<Tc >,
+                nlim_quiet_NaN_v<Tv>, nlim_quiet_NaN_v<Tcv>)
 
+       /*ELSE*/ : 
+            not_meaningful(
+                nlim_quiet_NaN_v<T >, nlim_quiet_NaN_v<Tc >,
+                nlim_quiet_NaN_v<Tv>, nlim_quiet_NaN_v<Tcv>);
 
+    bool valid_sNaN = 
+        /*IF*/ nlim_has_signaling_NaN_v<T> ? 
+        (enforce_consistent_values_impl<T, false>)(
+            nlim_signaling_NaN_v<T >, nlim_signaling_NaN_v<Tc >,
+            nlim_signaling_NaN_v<Tv>, nlim_signaling_NaN_v<Tcv>)
+
+        /*ELSE*/ : 
+        not_meaningful(
+            nlim_signaling_NaN_v<T >, nlim_signaling_NaN_v<Tc >,
+            nlim_signaling_NaN_v<Tv>, nlim_signaling_NaN_v<Tcv>);
+
+    return valid_qNaN && valid_sNaN;
+
+    
 }
 
+template <class T, class Desired, template <class> class... NlimMembers>
+consteval bool enforce_consistent_values()
+{
+    static_assert(req_same_as<std::remove_cv_t<T>, T>, 
+        "Implementation Bug: T should be cv-unqualified.");
 
+    using Tc  = T const;
+    using Tv  = T volatile;
+    using Tcv = T const volatile;
+
+    return (((enforce_consistent_values_impl<Desired>)(
+                NlimMembers<T >::value, NlimMembers<Tc >::value,
+                NlimMembers<Tv>::value, NlimMembers<Tcv>::value))
+            && ...);
 }
+
+} // nlim_impl
+
+
+
+template <class Type, class T = std::remove_cv_t<Type>>
+concept consistent_nlim_member_values =
+    bool_v<
+        nlim_impl::enforce_consistent_values<
+            T, bool,
+
+            nlim_is_specialized,
+            nlim_is_signed,
+            nlim_is_integer,
+            nlim_is_exact,
+            nlim_is_iec559,
+            nlim_is_bounded,
+            nlim_is_modulo,
+            
+            nlim_has_infinity,
+            nlim_has_quiet_NaN,
+            nlim_has_signaling_NaN,
+            nlim_has_denorm_loss
+        >()
+        && nlim_impl::enforce_consistent_values<
+            T, int,
+
+            nlim_digits,
+            nlim_digits10,
+            nlim_max_digits10,
+            
+            nlim_radix,
+            
+            nlim_min_exponent,
+            nlim_min_exponent10,
+            nlim_max_exponent,
+            nlim_max_exponent10
+        >()
+        && nlim_impl::enforce_consistent_values<
+            T, std::float_round_style,
+            
+            nlim_round_style
+        >()
+        && nlim_impl::enforce_consistent_values<
+            T, std::float_denorm_style,
+            
+            nlim_has_denorm
+        >()
+    >;
+
+//  Certain members are only "meaningful" for certain types and in accordance
+//  with the standard, 
+//      "Any value that is not 'meaningful' shall be set to 0 or false." 
+//      - https://eel.is/c++draft/numeric.special
+template <class T>
+concept valid_nlim_member_values =
+    bool_v<        
+           (  !nlim_is_iec559_v<T> // 1
+            || 
+               nlim_has_infinity_v<T> 
+            && nlim_has_quiet_NaN_v<T> 
+            && nlim_has_signaling_NaN_v<T>
+            // && !nlim_is_exact_v<T> 
+            // ^^^ not really sure if this holds true for every IEEE-754 floating-point
+            && !nlim_is_integer_v<T>)
+
+        && (  !nlim_is_integer_v<T> // 2
+            || 
+                nlim_is_exact_v<T> 
+            && !nlim_is_iec559_v<T>
+            && !nlim_has_infinity_v<T>
+            && !nlim_has_quiet_NaN_v<T> 
+            && !nlim_has_signaling_NaN_v<T>
+            && !nlim_tinyness_before_v<T>
+
+            && nlim_has_denorm_v<T> == std::denorm_absent
+            && nlim_round_style_v<T> == std::round_toward_zero
+
+            && nlim_impl::not_meaningful(
+                nlim_epsilon_v<T>,
+                nlim_denorm_min_v<T>)
+
+            && nlim_impl::not_meaningful(
+                nlim_min_exponent_v<T>,
+                nlim_max_exponent_v<T>,
+                nlim_min_exponent10_v<T>,
+                nlim_max_exponent10_v<T>,
+                nlim_max_digits10_v<T>
+            ))
+        
+        && (  !nlim_has_infinity_v<T> 
+            || nlim_impl::not_meaningful(nlim_infinity_v<T>))
+        
+        && (   nlim_is_bounded_v<T>
+            || nlim_impl::not_meaningful(nlim_digits10_v<T>))
+
+        && (nlim_impl::enforce_consistent_NaNs<T>())
+        && (nlim_impl::check_min_max_and_lowest<T>())
+        
+        && (nlim_radix_v<T> > 1)
+    >;
+
+//  1: constraints imposed upon types that define 'is_iec559' as true
+//     (thus identifying as conformant to the IEEE-754 standard)
+// 
+//      - has_infinty, has_quiet_NaN, has_signaling_NaN, must all be true
+//      - is_integer should be false
+
+//  2: constaints imposed upon types imposed upon types that define 
+//     'is_integer' as true. 
+// 
+//      - is_exact should be true https://eel.is/c++draft/numeric.limits#members-20
+// 
+//      - the following specializations are only meaningful for specializations
+//        involving floating point types (and thus should be false in the case
+//        an integer specialization):
+//          - is_iec559, has_infinty, has_quiet_NaN, has_signaling_NaN, 
+//            tinyness_before
+// 
+//      - has_denorm == denorm_absent 
+//      - round_style == round_towards_zero
+//
+//
+
+//  TODO: Finish explaining the mess that is all of the preconditions for a type
+//        being a valid numeric limits specialization. And maybe add toggleable 
+//        static_asserts for various preconditions.
+//
+
+
+template <class T>
+concept nlim_specialized_for_impl =
+       bool_v<T((int)0) == T()>
+    && consistent_nlim_member_values<T>
+    && valid_nlim_member_values<T>;
 
 }
 
