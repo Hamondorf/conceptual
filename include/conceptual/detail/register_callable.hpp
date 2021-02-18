@@ -19,7 +19,7 @@ class is_registered_callable;
 template <class T>
 class callable_reg_helper
 {
-    friend struct is_registered_callable<T>;
+    friend class is_registered_callable<T>;
 
     friend consteval bool callable_reg_adl(callable_reg_helper);
 

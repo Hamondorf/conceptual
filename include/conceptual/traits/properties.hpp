@@ -52,7 +52,7 @@ concept req_signed =
 
 template <class T>
 concept req_unsigned = 
-        req_signed_integer<T>
+        req_unsigned_integer<T>
     || (std::is_unsigned_v<char> && req_same_as_ignore_cv<T, char>);
 
 template <class T>

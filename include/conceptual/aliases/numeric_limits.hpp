@@ -35,8 +35,8 @@ struct nlim_constant_impl<T, fn>
 
     static constexpr T value = fn();
 
-    static constexpr operator value_type()   const noexcept { return value; }
-    static constexpr value_type operator()() const noexcept { return value; }
+    constexpr operator value_type()   const noexcept { return value; }
+    constexpr value_type operator()() const noexcept { return value; }
 };
 
 template <class T, auto value_or_fn>
@@ -103,6 +103,12 @@ using nlim_is_ieee754 = nlim_is_iec559<T>;
 
 template <class T>
 inline constexpr bool nlim_is_ieee754_v = nlim_is_iec559_v<T>;
+
+template <class T>
+using nlim_is_unsigned = std::bool_constant<!nlim_is_signed_v<T>>;
+
+template <class T>
+inline constexpr bool nlim_is_unsigned_v = nlim_is_unsigned<T>::value;
 
 #undef HAM_CPT_NLIM_ALIAS
 

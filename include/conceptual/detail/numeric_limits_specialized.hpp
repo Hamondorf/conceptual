@@ -61,7 +61,7 @@ struct NotMeaningfulFn
     consteval bool operator()(T const& value, Ts const&... values) const noexcept
     {
         if constexpr (!(req_same_as<T, Ts> && ...))
-            return false
+            return false;
         else
             return ((*this)(value) && ...  && (*this)(values));
     }
